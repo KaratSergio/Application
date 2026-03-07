@@ -34,10 +34,4 @@ export class UsersController {
   async getMyParticipations(@Request() req) {
     return this.eventsService.getUserParticipations(req.user.id);
   }
-
-  @Get(':userId/events')
-  @ApiOperation({ summary: 'Get user events by user id' })
-  async getUserEvents(@Param('userId') userId: string) {
-    return this.eventsService.getUserEvents(userId);
-  }
 }
