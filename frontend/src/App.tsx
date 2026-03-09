@@ -16,10 +16,14 @@ export function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
+
+        <Route path="/" element={<Layout />}>
           <Route index element={<Navigate to="/events" replace />} />
           <Route path="events" element={<EventsList />} />
           <Route path="events/:id" element={<EventDetails />} />
+        </Route>
+
+        <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
           <Route path="create-event" element={<CreateEvent />} />
           <Route path="my-events" element={<MyEvents />} />
         </Route>

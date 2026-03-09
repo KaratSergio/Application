@@ -12,6 +12,11 @@ export interface EventParticipant {
   };
 }
 
+export interface EventsApiResponse {
+  data: Event[];
+  total: number;
+}
+
 export interface Event {
   id: string;
   title: string;
