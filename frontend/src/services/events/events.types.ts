@@ -21,7 +21,7 @@ export interface Event {
   description: string;
   dateTime: string; // ISO string
   location: string;
-  capacity: number;
+  capacity: number | null;
   visibility: 'public' | 'private';
   organizerId: string;
   organizer?: EventOrganizer;
@@ -38,7 +38,7 @@ export interface CreateEventDto {
   description: string;
   dateTime: string;
   location: string;
-  capacity: number;
+  capacity?: number | null;
   visibility: 'public' | 'private';
 }
 

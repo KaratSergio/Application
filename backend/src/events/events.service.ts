@@ -18,7 +18,7 @@ const ERROR = {
   ALREADY_JOINED: 'Already joined',
   EVENT_FULL: 'Event is full',
   NOT_PARTICIPANT: 'Not a participant',
-  INVALID_CAPACITY: 'Capacity must be at least 1',
+  INVALID_CAPACITY: 'Capacity must be >= 1 or null',
 } as const;
 
 @Injectable()
@@ -41,6 +41,7 @@ export class EventsService {
     if (!organizer) throw new NotFoundException(ERROR.USER_NOT_FOUND);
 
     this._validateEventDate(dto.dateTime);
+    this._validateCapacity(dto.capacity);
 
     const event = this.eventRepository.create({
       ...dto,
@@ -148,7 +149,7 @@ export class EventsService {
       if (existing) throw new BadRequestException(ERROR.ALREADY_JOINED);
 
       const count = await manager.count(Participant, { where: { eventId } });
-      if (count >= event.capacity) throw new BadRequestException(ERROR.EVENT_FULL);
+      if (event.capacity && count >= event.capacity) throw new BadRequestException(ERROR.EVENT_FULL);
 
       await manager.save(Participant, { eventId, userId });
       this.logger.log(`User ${userId} joined event ${eventId}`);
@@ -210,8 +211,8 @@ export class EventsService {
     }
   }
 
-  private _validateCapacity(capacity: number): void {
-    if (capacity < 1) {
+  private _validateCapacity(capacity?: number): void {
+    if (capacity !== undefined && capacity !== null && capacity < 1) {
       throw new BadRequestException(ERROR.INVALID_CAPACITY);
     }
   }

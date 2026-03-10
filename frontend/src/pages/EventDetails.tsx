@@ -8,7 +8,7 @@ import {
   ChevronLeftIcon, ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import Modal from '../components/ui/Modal';
-import EditEventForm from '../components/forms/EditEventForm';
+import EventForm from '../components/EventForm';
 import DeleteConfirmation from '../components/DeleteConfirmation';
 
 export default function EventDetails() {
@@ -20,6 +20,8 @@ export default function EventDetails() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editError, setEditError] = useState('');
 
   useEffect(() => {
     if (id) fetchEventById(id);
@@ -41,8 +43,17 @@ export default function EventDetails() {
   const handleEdit = async (eventData: any) => {
     if (!id) return;
 
-    await updateEvent(id, eventData);
-    setShowEditModal(false);
+    setIsUpdating(true);
+    setEditError('');
+
+    try {
+      await updateEvent(id, eventData);
+      setShowEditModal(false);
+    } catch (err: any) {
+      setEditError(err.message || 'Failed to update event');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const formatDateTime = (dateString: string) => {
@@ -264,12 +275,17 @@ export default function EventDetails() {
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
         title="Edit Event"
+        classHeader="hidden"
+        classContent="px-0 py-0"
         maxWidth="lg"
       >
-        <EditEventForm
-          event={currentEvent}
+        <EventForm
+          mode="edit"
+          initialData={currentEvent}
           onSubmit={handleEdit}
           onCancel={() => setShowEditModal(false)}
+          isSubmitting={isUpdating}
+          error={editError}
         />
       </Modal>
 

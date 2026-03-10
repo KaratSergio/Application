@@ -8,6 +8,9 @@ interface ModalProps {
   children: ReactNode;
   maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   showCloseButton?: boolean;
+  classHeader?: string;
+  classContent?: string;
+  classBackdrop?: string;
 }
 
 export default function Modal({
@@ -16,7 +19,10 @@ export default function Modal({
   title,
   children,
   maxWidth = 'md',
-  showCloseButton = true
+  showCloseButton = true,
+  classHeader = '',
+  classContent = '',
+  classBackdrop = '',
 }: ModalProps) {
   // blocked scroll
   useEffect(() => {
@@ -49,7 +55,7 @@ export default function Modal({
     <div className="relative z-50">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity animate-fadeIn"
+        className={`fixed inset-0 bg-black/50 transition-opacity animate-fadeIn ${classBackdrop}`}
         onClick={onClose}
       />
 
@@ -62,7 +68,7 @@ export default function Modal({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className={`flex items-center justify-between px-6 py-4 border-b border-gray-100 ${classHeader}`}>
               <h3 className="text-lg font-semibold text-gray-900">
                 {title}
               </h3>
@@ -78,7 +84,7 @@ export default function Modal({
             </div>
 
             {/* Content */}
-            <div className="px-6 py-4">
+            <div className={classContent || 'px-6 py-4'}>
               {children}
             </div>
           </div>

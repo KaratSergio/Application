@@ -1,11 +1,9 @@
 import { useForm } from 'react-hook-form';
-import { CalendarIcon, MapPinIcon, UserGroupIcon, GlobeAltIcon, LockClosedIcon, XCircleIcon } from '@heroicons/react/24/outline';
-
-interface CreateEventFormProps {
-  onSubmit: (data: EventFormData) => Promise<void>;
-  isSubmitting?: boolean;
-  error?: string;
-}
+import {
+  CalendarIcon, MapPinIcon, UserGroupIcon,
+  GlobeAltIcon, LockClosedIcon, XCircleIcon,
+  PencilSquareIcon
+} from '@heroicons/react/24/outline';
 
 export interface EventFormData {
   title: string;
@@ -13,50 +11,132 @@ export interface EventFormData {
   date: string;
   time: string;
   location: string;
-  capacity: number;
+  capacity?: number | null;
   visibility: 'public' | 'private';
 }
 
-export default function CreateEventForm({ onSubmit, isSubmitting = false, error: externalError }: CreateEventFormProps) {
+interface EventFormProps {
+  mode: 'create' | 'edit';
+  initialData?: Partial<EventFormData> & { dateTime?: string };
+  onSubmit: (data: EventFormData) => Promise<void>;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
+  error?: string;
+}
+
+export default function EventForm({
+  mode,
+  initialData,
+  onSubmit,
+  onCancel,
+  isSubmitting = false,
+  error: externalError
+}: EventFormProps) {
+  const getDefaultValues = () => {
+    if (mode === 'edit' && initialData?.dateTime) {
+      const eventDate = new Date(initialData.dateTime);
+      return {
+        title: initialData.title || '',
+        description: initialData.description || '',
+        date: eventDate.toISOString().split('T')[0],
+        time: eventDate.toTimeString().slice(0, 5),
+        location: initialData.location || '',
+        capacity: initialData.capacity ?? null,
+        visibility: initialData.visibility || 'public',
+      };
+    }
+
+    return {
+      visibility: 'public' as const,
+      capacity: null,
+      title: '',
+      description: '',
+      date: '',
+      time: '',
+      location: '',
+    };
+  };
+
   const {
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
-    trigger
+    watch,
+    setError
   } = useForm<EventFormData>({
-    defaultValues: {
-      visibility: 'public',
-      capacity: 1,
-    },
+    defaultValues: getDefaultValues()
   });
 
-  // Handle capacity change to ensure it's always a valid number
-  const handleCapacityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '') {
-      setValue('capacity', 1);
-    } else {
-      const num = parseInt(value, 10);
-      if (!isNaN(num)) setValue('capacity', num);
+  const selectedDate = watch('date');
+  const selectedTime = watch('time');
+
+  const validateDate = (date: string) => {
+    if (!date) return 'Date is required';
+
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate < today) {
+      return 'Date cannot be in the past';
     }
-    trigger('capacity');
+    return true;
+  };
+
+  const validateTime = (time: string) => {
+    if (!time) return 'Time is required';
+
+    if (selectedDate) {
+      const selectedDateTime = new Date(`${selectedDate}T${time}`);
+      const now = new Date();
+
+      if (selectedDateTime < now) {
+        return 'Time cannot be in the past';
+      }
+    }
+    return true;
+  };
+
+  const onFormSubmit = async (data: EventFormData) => {
+    try {
+      if (mode === 'edit' && selectedDate && selectedTime) {
+        const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
+        if (selectedDateTime < new Date()) {
+          setError('root', {
+            message: 'Event date must be in the future'
+          });
+          return;
+        }
+      }
+
+      await onSubmit(data);
+    } catch (error) {
+      setError('root', {
+        message: `Failed to ${mode} event. Please try again.`
+      });
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 space-y-4 max-w-xl mx-auto w-full">
-      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-0">Create New Event</h1>
-      <p className="text-sm text-gray-400">Fill in the details to create an amazing event</p>
+    <form onSubmit={handleSubmit(onFormSubmit)} className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 sm:p-4 space-y-4 max-w-xl mx-auto w-full">
+      <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-0">
+        {mode === 'create' ? 'Create New Event' : 'Edit Event'}
+      </h1>
+      <p className="text-sm text-gray-400">
+        {mode === 'create'
+          ? 'Fill in the details to create an amazing event'
+          : 'Update your event details'}
+      </p>
 
       {/* Error message */}
-      {externalError && (
+      {(externalError || errors.root) && (
         <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-md">
           <div className="flex">
             <div className="shrink-0">
               <XCircleIcon className="h-4 w-4 text-red-400" />
             </div>
             <div className="ml-2">
-              <p className="text-xs text-red-700">{externalError}</p>
+              <p className="text-xs text-red-700">{externalError || errors.root?.message}</p>
             </div>
           </div>
         </div>
@@ -80,7 +160,7 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
           className={`w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 focus:outline-none focus:ring-2
             focus:ring-green-500 transition-colors ${errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
             }`}
-          placeholder="Enter event title"
+          placeholder="e.g., Tech Conference 2026"
         />
         {errors.title && (
           <p className="mt-1 text-xs text-red-600">{errors.title.message}</p>
@@ -96,6 +176,10 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
           id="description"
           rows={3}
           {...register('description', {
+            minLength: {
+              value: 10,
+              message: 'Description must be at least 10 characters'
+            },
             maxLength: {
               value: 500,
               message: 'Description cannot exceed 500 characters'
@@ -103,7 +187,7 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
           })}
           className="w-full px-3 py-2 text-sm border bg-gray-50 border-gray-300 rounded-lg focus:outline-none focus:ring-2
           focus:ring-green-500 transition-colors resize-none"
-          placeholder="Describe your event..."
+          placeholder="Describe what makes your event special..."
         />
         {errors.description && (
           <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>
@@ -124,15 +208,7 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
             type="date"
             {...register('date', {
               required: 'Date is required',
-              validate: (value) => {
-                const selectedDate = new Date(value);
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                if (selectedDate < today) {
-                  return 'Date cannot be in the past';
-                }
-                return true;
-              }
+              validate: validateDate
             })}
             min={new Date().toISOString().split('T')[0]}
             className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
@@ -153,16 +229,7 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
             type="time"
             {...register('time', {
               required: 'Time is required',
-              validate: (value, formValues) => {
-                if (formValues.date) {
-                  const selectedDateTime = new Date(`${formValues.date}T${value}`);
-                  const now = new Date();
-                  if (selectedDateTime < now) {
-                    return 'Event time must be in the future';
-                  }
-                }
-                return true;
-              }
+              validate: validateTime
             })}
             className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
             focus:ring-green-500 transition-colors ${errors.time ? 'border-red-300 bg-red-50' : 'border-gray-300'
@@ -195,7 +262,7 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
           className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
             focus:ring-green-500 transition-colors ${errors.location ? 'border-red-300 bg-red-50' : 'border-gray-300'
             }`}
-          placeholder="Enter location"
+          placeholder="e.g., Convention Center, San Francisco"
         />
         {errors.location && (
           <p className="mt-1 text-xs text-red-600">{errors.location.message}</p>
@@ -207,7 +274,7 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
         <label htmlFor="capacity" className="block text-xs font-medium text-gray-700 mb-1">
           <div className="flex items-center">
             <UserGroupIcon className="w-3 h-3 mr-1 text-gray-500" />
-            Capacity <span className="text-red-500 ml-1">*</span>
+            Capacity <span className="text-gray-400 text-xs ml-1">(optional)</span>
           </div>
         </label>
         <input
@@ -215,25 +282,23 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
           type="number"
           min="1"
           {...register('capacity', {
-            required: 'Capacity is required',
+            setValueAs: (v) => v === '' ? undefined : Number(v),
             validate: (value) => {
-              const num = Number(value);
-              if (isNaN(num)) return 'Capacity must be a valid number';
-              if (num < 1) return 'Capacity must be at least 1';
-              if (!Number.isInteger(num)) return 'Capacity must be a whole number';
+              if (value == null) return true;
+              if (value < 1) return 'Capacity must be at least 1';
+              if (!Number.isInteger(value)) return 'Capacity must be a whole number';
               return true;
             }
           })}
-          onChange={handleCapacityChange}
           className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
-          focus:ring-green-500 transition-colors ${errors.capacity ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
-          placeholder="Enter capacity"
+            focus:ring-green-500 transition-colors ${errors.capacity ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
+          placeholder="Leave empty for unlimited"
         />
         {errors.capacity && (
           <p className="mt-1 text-xs text-red-600">{errors.capacity.message}</p>
         )}
         <p className="mt-1 text-xs text-gray-500">
-          Maximum number of participants. Must be at least 1.
+          Maximum number of participants. Leave empty for unlimited.
         </p>
       </div>
 
@@ -278,14 +343,16 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
 
       {/* Action Buttons */}
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-3 border-t">
-        <button
-          type="button"
-          onClick={() => window.history.back()}
-          className="w-full sm:w-auto px-4 py-2 text-sm border border-gray-300 rounded-lg
-          text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-        >
-          Cancel
-        </button>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="w-full sm:w-auto px-4 py-2 text-sm border border-gray-300 rounded-lg
+            text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+        )}
         <button
           type="submit"
           disabled={isSubmitting}
@@ -295,10 +362,19 @@ export default function CreateEventForm({ onSubmit, isSubmitting = false, error:
           {isSubmitting ? (
             <>
               <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-              Creating...
+              {mode === 'create' ? 'Creating...' : 'Saving...'}
             </>
           ) : (
-            'Create Event'
+            <>
+              {mode === 'create' ? (
+                'Create Event'
+              ) : (
+                <>
+                  <PencilSquareIcon className="w-4 h-4 mr-2" />
+                  Save Changes
+                </>
+              )}
+            </>
           )}
         </button>
       </div>

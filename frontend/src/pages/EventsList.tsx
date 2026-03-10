@@ -249,7 +249,7 @@ export default function EventsList() {
                           <div className="flex items-center">
                             <UserGroupIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 shrink-0 text-gray-400" />
                             <span className="text-xs text-gray-600">
-                              {event.participantsCount} / {event.capacity} participants
+                              {event.participantsCount} / {event.capacity || '∞'} participants
                             </span>
                           </div>
                           {event.isFull && (

@@ -93,7 +93,7 @@ export class SeedService implements OnModuleInit {
         description: 'Casual networking event for tech professionals',
         dateTime: nextWeek,
         location: 'Downtown Cafe',
-        capacity: 7,
+        // capacity: undefined , // unlimited
         visibility: 'public',
         organizerId: user2.id,
       });

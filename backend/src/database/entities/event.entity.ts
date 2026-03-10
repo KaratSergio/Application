@@ -1,12 +1,11 @@
 import {
   Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany,
-  CreateDateColumn, JoinColumn, Check
+  CreateDateColumn, JoinColumn
 } from 'typeorm';
 import { User } from './user.entity';
 import { Participant } from './participant.entity';
 
 @Entity('events')
-@Check(`"capacity" >= 1`)
 export class Event {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -23,10 +22,7 @@ export class Event {
   @Column()
   location: string;
 
-  @Column({
-    nullable: false,
-    default: 1
-  })
+  @Column({ nullable: true })
   capacity: number;
 
   @Column({ default: 'public' })
