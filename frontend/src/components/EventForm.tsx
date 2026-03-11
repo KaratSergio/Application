@@ -1,19 +1,11 @@
 import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { eventSchema, type EventFormData } from '../utils/schemas/eventSchema';
 import {
   CalendarIcon, MapPinIcon, UserGroupIcon,
   GlobeAltIcon, LockClosedIcon, XCircleIcon,
   PencilSquareIcon
 } from '@heroicons/react/24/outline';
-
-export interface EventFormData {
-  title: string;
-  description: string;
-  date: string;
-  time: string;
-  location: string;
-  capacity?: number | null;
-  visibility: 'public' | 'private';
-}
 
 interface EventFormProps {
   mode: 'create' | 'edit';
@@ -32,7 +24,7 @@ export default function EventForm({
   isSubmitting = false,
   error: externalError
 }: EventFormProps) {
-  const getDefaultValues = () => {
+  const getDefaultValues = (): EventFormData => {
     if (mode === 'edit' && initialData?.dateTime) {
       const eventDate = new Date(initialData.dateTime);
       return {
@@ -43,73 +35,43 @@ export default function EventForm({
         location: initialData.location || '',
         capacity: initialData.capacity ?? null,
         visibility: initialData.visibility || 'public',
-      };
+      } as EventFormData;
     }
 
     return {
-      visibility: 'public' as const,
-      capacity: null,
       title: '',
       description: '',
       date: '',
       time: '',
       location: '',
-    };
+      capacity: null,
+      visibility: 'public',
+    } as EventFormData;
   };
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    watch,
     setError
   } = useForm<EventFormData>({
+    resolver: yupResolver(eventSchema),
     defaultValues: getDefaultValues()
   });
 
-  const selectedDate = watch('date');
-  const selectedTime = watch('time');
-
-  const validateDate = (date: string) => {
-    if (!date) return 'Date is required';
-
-    const selectedDate = new Date(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (selectedDate < today) {
-      return 'Date cannot be in the past';
-    }
-    return true;
-  };
-
-  const validateTime = (time: string) => {
-    if (!time) return 'Time is required';
-
-    if (selectedDate) {
-      const selectedDateTime = new Date(`${selectedDate}T${time}`);
+  const onFormSubmit = async (data: EventFormData) => {
+    try {
+      const selectedDateTime = new Date(`${data.date}T${data.time}`);
       const now = new Date();
 
       if (selectedDateTime < now) {
-        return 'Time cannot be in the past';
+        setError('root', {
+          message: 'Event date must be in the future'
+        });
+        return;
       }
-    }
-    return true;
-  };
 
-  const onFormSubmit = async (data: EventFormData) => {
-    try {
-      const dateTime = new Date(`${data.date}T${data.time}`).toISOString();
-
-      if (mode === 'edit') {
-        const selectedDateTime = new Date(dateTime);
-        if (selectedDateTime < new Date()) {
-          setError('root', {
-            message: 'Event date must be in the future'
-          });
-          return;
-        }
-      }
+      const dateTime = selectedDateTime.toISOString();
 
       await onSubmit({
         ...data,
@@ -155,13 +117,7 @@ export default function EventForm({
         <input
           id="title"
           type="text"
-          {...register('title', {
-            required: 'Title is required',
-            minLength: {
-              value: 3,
-              message: 'Title must be at least 3 characters'
-            }
-          })}
+          {...register('title')}
           className={`w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 focus:outline-none focus:ring-2
             focus:ring-green-500 transition-colors ${errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
             }`}
@@ -180,18 +136,10 @@ export default function EventForm({
         <textarea
           id="description"
           rows={3}
-          {...register('description', {
-            minLength: {
-              value: 10,
-              message: 'Description must be at least 10 characters'
-            },
-            maxLength: {
-              value: 500,
-              message: 'Description cannot exceed 500 characters'
-            }
-          })}
-          className="w-full px-3 py-2 text-sm border bg-gray-50 border-gray-300 rounded-lg focus:outline-none focus:ring-2
-          focus:ring-green-500 transition-colors resize-none"
+          {...register('description')}
+          className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
+            focus:ring-green-500 transition-colors resize-none ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'
+            }`}
           placeholder="Describe what makes your event special..."
         />
         {errors.description && (
@@ -211,10 +159,7 @@ export default function EventForm({
           <input
             id="date"
             type="date"
-            {...register('date', {
-              required: 'Date is required',
-              validate: validateDate
-            })}
+            {...register('date')}
             min={new Date().toISOString().split('T')[0]}
             className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
               focus:ring-green-500 transition-colors ${errors.date ? 'border-red-300 bg-red-50' : 'border-gray-300'
@@ -232,10 +177,7 @@ export default function EventForm({
           <input
             id="time"
             type="time"
-            {...register('time', {
-              required: 'Time is required',
-              validate: validateTime
-            })}
+            {...register('time')}
             className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
             focus:ring-green-500 transition-colors ${errors.time ? 'border-red-300 bg-red-50' : 'border-gray-300'
               }`}
@@ -257,13 +199,7 @@ export default function EventForm({
         <input
           id="location"
           type="text"
-          {...register('location', {
-            required: 'Location is required',
-            minLength: {
-              value: 3,
-              message: 'Location must be at least 3 characters'
-            }
-          })}
+          {...register('location')}
           className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
             focus:ring-green-500 transition-colors ${errors.location ? 'border-red-300 bg-red-50' : 'border-gray-300'
             }`}
@@ -286,20 +222,7 @@ export default function EventForm({
           id="capacity"
           type="number"
           min="1"
-          {...register('capacity', {
-            setValueAs: (v) => {
-
-              if (v === '' || v === null || v === undefined) return null;
-              const num = Number(v);
-              return isNaN(num) ? null : num;
-            },
-            validate: (value) => {
-              if (value == null) return true;
-              if (value < 1) return 'Capacity must be at least 1';
-              if (!Number.isInteger(value)) return 'Capacity must be a whole number';
-              return true;
-            }
-          })}
+          {...register('capacity')}
           className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
             focus:ring-green-500 transition-colors ${errors.capacity ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
           placeholder="Leave empty for unlimited"
@@ -349,6 +272,9 @@ export default function EventForm({
             </div>
           </label>
         </div>
+        {errors.visibility && (
+          <p className="mt-1 text-xs text-red-600">{errors.visibility.message}</p>
+        )}
       </div>
 
       {/* Action Buttons */}
