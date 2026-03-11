@@ -8,7 +8,8 @@ import {
   ChevronLeftIcon, ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import Modal from '../components/ui/Modal';
-import EventForm, { type EventFormData } from '../components/EventForm';
+import EventForm from '../components/EventForm';
+import { type EventFormData } from '../utils/schemas/eventSchema';
 import DeleteConfirmation from '../components/DeleteConfirmation';
 import { getErrorMessage } from '../utils/getErrorMessage';
 import ErrorState from '../components/ui/ErrorState';

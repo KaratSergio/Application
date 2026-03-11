@@ -1,6 +1,6 @@
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from '../services/store/authStore';
 import {
   CalendarIcon, UserGroupIcon, PlusCircleIcon,
   ArrowLeftEndOnRectangleIcon, ArrowRightEndOnRectangleIcon

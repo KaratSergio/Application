@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { authApi } from '../auth/auth.api';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore } from '../store/authStore';
 import type { LoginCredentials, RegisterCredentials } from '../auth/auth.types';
 import type { ApiError } from '../api/client';
 

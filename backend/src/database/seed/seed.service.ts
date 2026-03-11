@@ -2,9 +2,9 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
-import { User } from '../database/entities/user.entity';
-import { Event } from '../database/entities/event.entity';
-import { Participant } from '../database/entities/participant.entity';
+import { User } from '../entities/user.entity';
+import { Event } from '../entities/event.entity';
+import { Participant } from '../entities/participant.entity';
 
 @Injectable()
 export class SeedService implements OnModuleInit {

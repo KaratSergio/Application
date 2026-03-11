@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { eventsApi } from '../events/events.api';
 import { usersApi } from '../users/users.api';
-import { useEventStore } from '../../store/eventStore';
+import { useEventStore } from '../store/eventStore';
 import type { ApiError } from '../api/client';
 import type {
   CreateEventDto, UpdateEventDto,
