@@ -3,14 +3,14 @@
 Event Management System is a full-featured application for managing events with the ability to create, edit, and participate in events.
 The project is built on React + NestJS + PostgreSQL stack.
 ---
-## 📋 Table of Contents
+## 📋Table of Contents
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Quick Start](#quick-start)
-- [Api Endpoints](#api-endpoints)
+- [API Endpoints](#api-endpoints)
 - [Project Structure](#project-structure)
 ---
-## ✨ Features
+## ✨Features
 
 - **Authentication**: Sign up and login with JWT
 - **Public Events**: Browse public events with join/leave functionality
@@ -21,7 +21,7 @@ The project is built on React + NestJS + PostgreSQL stack.
 - **Responsive Design**: Mobile and desktop versions
 
 ---
-## 🛠 Tech Stack
+## 🛠Tech Stack
 
 ### Frontend
 - React 19 + TypeScript
@@ -47,8 +47,9 @@ The project is built on React + NestJS + PostgreSQL stack.
 - PostgreSQL
 - PgAdmin
 
+[⬆️ Back to Top](#)
 ---
-## 🚀 Quick Start
+## 🚀Quick Start
 
 ### Prerequisites
 - Docker and Docker Compose
@@ -80,8 +81,10 @@ The project is built on React + NestJS + PostgreSQL stack.
   - Swagger: http://localhost:5000/api/docs
   - PgAdmin: http://localhost:5050
 
+
+[⬆️ Back to Top](#)
 ---
-  ## 📚 API Endpoints
+  ## 📚API Endpoints
 
 ### 🔐 Authentication
 | Method | Endpoint | Description |
@@ -119,8 +122,7 @@ The project is built on React + NestJS + PostgreSQL stack.
 | `GET` | `/users/:id` | Get user details by ID |
 
 ---
-
-## 📁 Project Structure
+## 📁Project Structure
 ```
 Application/
 ├── backend/                 # NestJS application
@@ -149,3 +151,8 @@ Application/
 ├── .env.example
 └── README.md
 ```
+[⬆️ Back to Top](#)
+---
+After seeding, the following test users are available:
+- bob@g.com / 123456
+- jane@g.com / 123456
