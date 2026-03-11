@@ -1,18 +1,14 @@
 import { apiClient } from '../api/client';
 import { API_ENDPOINTS } from '../api/endpoints';
 import type {
-  Event,
-  CreateEventDto,
-  UpdateEventDto,
-  EventFilters,
-  ParticipantResponse,
-  ParticipantsCount,
-  ParticipationStatus,
+  Event, EventsApiResponse,
+  CreateEventDto, UpdateEventDto, EventFilters,
+  ParticipantResponse, ParticipantsCount, ParticipationStatus,
 } from './events.types';
 
 export const eventsApi = {
   getPublicEvents: (filters?: EventFilters) =>
-    apiClient.get<Event[]>(API_ENDPOINTS.EVENTS.BASE, { params: filters }),
+    apiClient.get<EventsApiResponse>(API_ENDPOINTS.EVENTS.BASE, { params: filters }),
 
   getEventById: (id: string) =>
     apiClient.get<Event>(API_ENDPOINTS.EVENTS.DETAIL(id)),

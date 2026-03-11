@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { authApi } from '../services/auth/auth.api';
 import type { User } from '../services/auth/auth.types';
 
 interface AuthState {
@@ -11,7 +12,7 @@ interface AuthState {
   setUser: (user: User | null) => void;
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -32,11 +33,21 @@ export const useAuthStore = create<AuthState>()(
 
       setError: (error) => set({ error }),
 
-      logout: () => set({
-        user: null,
-        isAuthenticated: false,
-        error: null
-      }),
+      logout: async () => {
+        try {
+          set({ isLoading: true });
+          await authApi.logout();
+        } catch (error) {
+          console.error('Logout error:', error);
+        } finally {
+          set({
+            user: null,
+            isAuthenticated: false,
+            error: null,
+            isLoading: false
+          });
+        }
+      },
 
       clearError: () => set({ error: null }),
     }),

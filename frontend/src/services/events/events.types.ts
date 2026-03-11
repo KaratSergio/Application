@@ -7,9 +7,12 @@ export interface EventParticipant {
   userId: string;
   eventId: string;
   joinedAt: string;
-  user?: {
-    email: string;
-  };
+  userEmail: string;
+}
+
+export interface EventsApiResponse {
+  data: Event[];
+  total: number;
 }
 
 export interface Event {

@@ -1,13 +1,16 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { eventsApi } from '../events/events.api';
 import { usersApi } from '../users/users.api';
 import { useEventStore } from '../../store/eventStore';
-import type { CreateEventDto, UpdateEventDto, EventFilters } from '../events/events.types';
 import type { ApiError } from '../api/client';
+import type {
+  CreateEventDto, UpdateEventDto,
+  EventFilters, EventsApiResponse
+} from '../events/events.types';
 
 export const useEvents = () => {
   const {
-    events,
+    events: storeEvents,
     currentEvent,
     userEvents,
     isLoading,
@@ -23,14 +26,24 @@ export const useEvents = () => {
     clearError
   } = useEventStore();
 
+  const events = useMemo(() => {
+    if (!storeEvents) return [];
+    if (Array.isArray(storeEvents)) return storeEvents;
+    if (storeEvents && typeof storeEvents === 'object' && 'data' in storeEvents) {
+      return (storeEvents as EventsApiResponse).data || [];
+    }
+    return [];
+  }, [storeEvents]);
+
   const fetchPublicEvents = useCallback(async (filters?: EventFilters) => {
     setLoading(true);
     clearError();
 
     try {
       const response = await eventsApi.getPublicEvents(filters);
-      setEvents(response.data);
-      return response.data;
+      const eventsData = (response.data as EventsApiResponse).data || [];
+      setEvents(eventsData);
+      return eventsData;
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError.message);
@@ -159,14 +172,11 @@ export const useEvents = () => {
   }, [updateEventInLists, setLoading, setError, clearError]);
 
   return {
-    // Data from store
     events,
     currentEvent,
     userEvents,
     isLoading,
     error,
-
-    // Actions
     fetchPublicEvents,
     fetchEventById,
     fetchMyEvents,

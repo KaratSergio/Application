@@ -1,102 +1,298 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useEventStore } from '../store/eventStore';
-import { useAuthStore } from '../store/authStore';
-import { CalendarIcon, MapPinIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { useEvents } from '../services/hooks/useEvents';
+import { useAuth } from '../services/hooks/useAuth';
+import type { Event } from '../services/events/events.types';
+import {
+  CalendarIcon, MapPinIcon,
+  UserGroupIcon, MagnifyingGlassIcon,
+  FunnelIcon, ClockIcon, XMarkIcon
+} from '@heroicons/react/24/outline';
+import { JoinButton, LeaveButton, FullButton, DisabledButton, EndedButton } from '../components/ui/Button';
+import LoadingState from '../components/ui/LoadingState';
+import ErrorState from '../components/ui/ErrorState';
+import { formatEventListItem } from '../utils/formatDate';
 
 export default function EventsList() {
-  const { events, isLoading, error, fetchPublicEvents, joinEvent, leaveEvent } = useEventStore();
-  const { user } = useAuthStore();
+  const { events, isLoading, error, fetchPublicEvents, joinEvent, leaveEvent } = useEvents();
+  const { user } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    location: '',
+    date: '',
+  });
+
+  const isEventPassed = (eventDateTime: string) => {
+    return new Date(eventDateTime) < new Date();
+  };
 
   useEffect(() => {
     fetchPublicEvents();
-  }, []);
+  }, [fetchPublicEvents]);
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="text-gray-500">Loading events...</div>
-      </div>
-    );
-  }
+  const filteredEvents = useMemo(() => {
+    if (!Array.isArray(events)) return [];
 
-  if (error) {
-    return (
-      <div className="bg-red-100 text-red-700 p-4 rounded">
-        Error: {error}
-      </div>
-    );
-  }
+    return events.filter((event: Event) => {
+      const matchesSearch =
+        (event.title?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (event.description?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+
+      const matchesLocation = !filters.location ||
+        (event.location?.toLowerCase() || '').includes(filters.location.toLowerCase());
+
+      const matchesDate = !filters.date ||
+        (event.dateTime && new Date(event.dateTime).toISOString().split('T')[0] === filters.date);
+
+      return matchesSearch && matchesLocation && matchesDate;
+    });
+  }, [events, searchTerm, filters]);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilters({ location: '', date: '' });
+    setShowFilters(false);
+  };
+
+  if (isLoading) return <LoadingState message="Loading events..." fullScreen />;
+  if (error) return <ErrorState message={error} fullScreen onRetry={fetchPublicEvents} />
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-8">Public Events</h1>
+    <div className="py-3 sm:py-4 md:py-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-4 md:mb-6">
+          <div className='flex flex-col gap-2'>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">
+              Discover Events
+            </h1>
+            <p className="ml-2 text-xs sm:text-sm font-normal text-gray-500">
+              Find and join exciting happening around you
+            </p>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((event) => (
-          <div key={event.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition">
-            <Link to={`/events/${event.id}`}>
-              <div className="p-6">
-                <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
-                <p className="text-gray-600 mb-4 line-clamp-2">{event.description}</p>
-
-                <div className="space-y-2 text-sm text-gray-500">
-                  <div className="flex items-center">
-                    <CalendarIcon className="w-4 h-4 mr-2" />
-                    {new Date(event.dateTime).toLocaleDateString()} at {new Date(event.dateTime).toLocaleTimeString()}
-                  </div>
-
-                  <div className="flex items-center">
-                    <MapPinIcon className="w-4 h-4 mr-2" />
-                    {event.location}
-                  </div>
-
-                  <div className="flex items-center">
-                    <UserGroupIcon className="w-4 h-4 mr-2" />
-                    {event.participantsCount} / {event.capacity || '∞'} participants
-                  </div>
-                </div>
-
-                <div className="mt-4 text-sm text-gray-600">
-                  Organized by: {event.organizer?.name || event.organizer?.email}
-                </div>
-              </div>
-            </Link>
-
-            <div className="px-6 pb-6">
-              {event.organizerId === user?.id ? (
-                <span className="inline-block px-4 py-2 bg-gray-100 text-gray-600 rounded text-sm">
-                  You are the organizer
-                </span>
-              ) : event.isFull ? (
-                <span className="inline-block px-4 py-2 bg-red-100 text-red-600 rounded text-sm">
-                  Event Full
-                </span>
-              ) : event.userJoined ? (
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative w-full sm:w-auto sm:min-w-62.5 md:min-w-70">
+              <MagnifyingGlassIcon className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2
+                w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search events..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-8 sm:pl-9 md:pl-10 pr-7 py-1.5 sm:py-2 
+                  text-xs sm:text-sm md:text-base border
+                  border-gray-300 rounded-lg focus:outline-none focus:ring-2
+                  focus:ring-green-500 focus:border-transparent bg-white"
+              />
+              {searchTerm && (
                 <button
-                  onClick={() => leaveEvent(event.id)}
-                  className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
                 >
-                  Leave
+                  <XMarkIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400 hover:text-gray-600" />
                 </button>
-              ) : (
-                <button
-                  onClick={() => joinEvent(event.id)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`px-3 bg-white  border border-gray-300 rounded-lg sm:px-3 py-1.5
+                  sm:py-0 flex items-center justify-center space-x-1.5 transition-colors text-xs sm:text-sm cursor-pointer
+                  ${showFilters || filters.location || filters.date ? ' text-green-700 ' : ' text-gray-400 '}`}
+            >
+              <FunnelIcon className="mr-0 w-3.5 h-3.5 sm:w-6 sm:h-6" />
+              <span className="hidden xs:inline">Filters</span>
+              {(filters.location || filters.date) && (
+                <span className="ml-1 bg-white text-green-600 rounded-full w-4 h-4 
+                  flex items-center justify-center text-[8px] sm:text-[10px] font-bold">
+                  {(filters.location ? 1 : 0) + (filters.date ? 1 : 0)}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Filters Panel */}
+        {showFilters && (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 mb-4 sm:mb-6">
+            <div className="flex justify-between items-center mb-2 sm:mb-3">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-900">Filters</h3>
+              <button
+                onClick={clearFilters}
+                className="text-xs text-green-600 hover:text-green-800"
+              >
+                Clear all
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  placeholder="Filter by location"
+                  value={filters.location}
+                  onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 
+                  rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={filters.date}
+                  onChange={(e) => setFilters(prev => ({ ...prev, date: e.target.value }))}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 
+                  rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Events Grid */}
+        {filteredEvents.length > 0 ? (
+          <div className="grid grid-cols-1 xs:grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-4 lg:gap-6">
+            {filteredEvents.map((event: Event) => {
+              const { date, time } = formatEventListItem(event.dateTime);
+
+              return (
+                <div
+                  key={event.id}
+                  className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100
+                  overflow-hidden hover:shadow-md transition-all duration-300
+                  flex flex-col h-full min-h-50 sm:min-h-60 md:min-h-70"
                 >
-                  Join
+                  {/* Content */}
+                  <Link to={`/events/${event.id}`} className="block flex-1">
+                    <div className="p-3 sm:p-4 md:p-5 h-full flex flex-col">
+                      {/* Title */}
+                      <h2 className="text-sm sm:text-base md:text-lg font-semibold
+                        text-gray-900 transition-colors mb-1 line-clamp-2 h-10 sm:h-12">
+                        {event.title}
+                      </h2>
+
+                      {/* Description */}
+                      <p className="text-xs text-gray-600 mb-2 line-clamp-2 leading-4 sm:leading-5 min-h-8 sm:min-h-10">
+                        {event.description}
+                      </p>
+
+                      {/* Details */}
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-start">
+                          <CalendarIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 mt-0.5 shrink-0 text-gray-400" />
+                          <span className="text-xs text-gray-600">{date}</span>
+                        </div>
+
+                        <div className="flex items-start">
+                          <ClockIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 mt-0.5 shrink-0 text-gray-400" />
+                          <span className="text-xs text-gray-600">{time}</span>
+                        </div>
+
+                        <div className="flex items-start">
+                          <MapPinIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 mt-0.5 shrink-0 text-gray-400" />
+                          <span className="text-xs text-gray-600 line-clamp-1">{event.location}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <UserGroupIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 shrink-0 text-gray-400" />
+                            <span className="text-xs text-gray-600">
+                              {event.participantsCount} / {event.capacity || '∞'} participants
+                            </span>
+                          </div>
+                          {event.isFull && (
+                            <span className="text-[10px] font-medium text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">
+                              Full
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+
+                  {/* Action Button */}
+                  <div className="px-3 pb-3 sm:px-4 sm:pb-4 md:px-5 md:pb-5 pt-0 mt-auto">
+                    {event.organizerId === user?.id ? (
+                      <DisabledButton fullWidth>
+                        You are the organizer
+                      </DisabledButton>
+                    ) : event.isFull ? (
+                      <FullButton fullWidth>
+                        Event Full
+                      </FullButton>
+                    ) : event.userJoined ? (
+                      isEventPassed(event.dateTime) ? (
+                        <DisabledButton fullWidth>
+                          Event Ended
+                        </DisabledButton>
+                      ) : (
+                        <LeaveButton
+                          fullWidth
+                          onClick={(e) => {
+                            e.preventDefault();
+                            leaveEvent(event.id);
+                          }}
+                        >
+                          Leave Event
+                        </LeaveButton>
+                      )
+                    ) : (
+                      isEventPassed(event.dateTime) ? (
+                        <EndedButton fullWidth>
+                          Event Ended
+                        </EndedButton>
+                      ) : (
+                        <JoinButton
+                          fullWidth
+                          onClick={(e) => {
+                            e.preventDefault();
+                            joinEvent(event.id);
+                          }}
+                        >
+                          Join Event
+                        </JoinButton>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8 sm:py-12 md:py-16 bg-white rounded-lg sm:rounded-xl border border-gray-100">
+            <div className="max-w-xs sm:max-w-sm mx-auto px-3 sm:px-4">
+              <CalendarIcon className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto text-gray-400 mb-2 sm:mb-3" />
+              <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 mb-1">
+                {events.length === 0 ? 'No events available' : 'No matching events'}
+              </h3>
+              <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">
+                {events.length === 0
+                  ? 'No public events available at the moment'
+                  : 'Try adjusting your search or filters'}
+              </p>
+              {(searchTerm || filters.location || filters.date) && (
+                <button
+                  onClick={clearFilters}
+                  className="px-4 sm:px-5 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs sm:text-sm font-medium"
+                >
+                  Clear filters
                 </button>
               )}
             </div>
           </div>
-        ))}
+        )}
       </div>
-
-      {events.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          No public events available
-        </div>
-      )}
     </div>
   );
 }

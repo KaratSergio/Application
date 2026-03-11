@@ -1,4 +1,4 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError } from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -17,11 +17,6 @@ export const apiClient = axios.create({
   timeout: 10000,
 });
 
-
-apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => { return config },
-  (error) => Promise.reject(error)
-);
 
 apiClient.interceptors.response.use(
   (response) => response,
