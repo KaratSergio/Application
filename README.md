@@ -64,8 +64,7 @@ The project is built on React + NestJS + PostgreSQL stack.
 
 2. **Create .env file in the /backend directory, take advantage env.example, to create environment variables**
    ```bash
-   cd backend
-   cp .env.example .env
+   cp .env.example backend/.env
 
 3. **Run Docker containers**
    ```bash
