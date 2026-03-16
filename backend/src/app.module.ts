@@ -7,6 +7,7 @@ import { EventsModule } from './events/events.module';
 import { DatabaseModule } from './database/database.module';
 import { SeedModule } from './database/seed/seed.module';
 import { TagsModule } from './tags/tags.module';
+import { AssistantModule } from './assistant/assistant.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { TagsModule } from './tags/tags.module';
     EventsModule,
     TagsModule,
     DatabaseModule,
-    SeedModule
+    SeedModule,
+    AssistantModule
   ],
   controllers: [],
   providers: [],
