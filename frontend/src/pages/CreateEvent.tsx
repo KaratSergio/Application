@@ -3,27 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useEvents } from '../services/hooks/useEvents';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import EventForm from '../components/EventForm';
-import { type EventFormData } from '../utils/schemas/eventSchema';
 import { getErrorMessage } from '../utils/getErrorMessage';
+import type { CreateEventDto } from '../services';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
   const { createEvent, isLoading } = useEvents();
   const [error, setError] = useState('');
 
-  const handleSubmit = async (data: EventFormData) => {
+  const handleSubmit = async (data: CreateEventDto) => {
     try {
-      const dateTime = new Date(`${data.date}T${data.time}`);
-
-      const newEvent = await createEvent({
-        title: data.title,
-        description: data.description,
-        dateTime: dateTime.toISOString(),
-        location: data.location,
-        capacity: data.capacity ?? null,
-        visibility: data.visibility,
-      });
-
+      const newEvent = await createEvent(data);
       navigate(`/events/${newEvent.id}`);
     } catch (err) {
       setError(getErrorMessage(err));

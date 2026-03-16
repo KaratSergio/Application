@@ -142,6 +142,11 @@ export class EventsService {
     if (!event) throw new EventNotFoundException();
     if (event.organizerId !== userId) throw new NotOrganizerException();
 
+    if (dto.title !== undefined) event.title = dto.title;
+    if (dto.description !== undefined) event.description = dto.description;
+    if (dto.location !== undefined) event.location = dto.location;
+    if (dto.visibility !== undefined) event.visibility = dto.visibility;
+
     if (dto.dateTime) {
       this._validateEventDate(dto.dateTime);
       event.dateTime = new Date(dto.dateTime);
@@ -153,17 +158,18 @@ export class EventsService {
     }
 
     if (dto.tags !== undefined) {
-      if (dto.tags.length > 0) event.tags = await this.tagsService.findOrCreate(dto.tags);
-      else event.tags = [];
+      if (dto.tags.length > 0) {
+        event.tags = await this.tagsService.findOrCreate(dto.tags);
+      } else {
+        event.tags = [];
+      }
     }
 
-    Object.assign(event, dto);
     await this.eventRepository.save(event);
     this.logger.log(`Event updated: ${id}`);
 
     return this.findOne(id, userId);
   }
-
   async remove(id: string, userId: string): Promise<void> {
     const event = await this.eventRepository.findOne({ where: { id } });
     if (!event) throw new EventNotFoundException();

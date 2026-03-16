@@ -18,6 +18,11 @@ export const eventSchema = yup.object({
     .oneOf(['public', 'private'])
     .required('Visibility is required')
     .defined(),
+  tags: yup.array()
+    .of(yup.string())
+    .max(5, 'Maximum 5 tags allowed')
+    .nullable()
+    .default([]),
 });
 
 export type EventFormData = yup.InferType<typeof eventSchema>;

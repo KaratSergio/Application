@@ -1,43 +1,59 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { eventSchema, type EventFormData } from '../utils/schemas/eventSchema';
 import {
   CalendarIcon, MapPinIcon, UserGroupIcon,
-  GlobeAltIcon, LockClosedIcon, XCircleIcon,
-  PencilSquareIcon
+  GlobeAltIcon, LockClosedIcon, XCircleIcon
 } from '@heroicons/react/24/outline';
+import TagSelect from './tag/TagSelect';
+import type { Tag } from '../services/tags/tags.types';
+import type { CreateEventDto, UpdateEventDto, Event } from '../services';
 
-interface EventFormProps {
-  mode: 'create' | 'edit';
-  initialData?: Partial<EventFormData> & { dateTime?: string };
-  onSubmit: (data: EventFormData & { dateTime: string }) => Promise<void>;
+type EventFormProps = {
+  mode: 'create';
+  onSubmit: (data: CreateEventDto) => Promise<void>;
   onCancel?: () => void;
   isSubmitting?: boolean;
   error?: string;
-}
+} | {
+  mode: 'edit';
+  onSubmit: (data: UpdateEventDto) => Promise<void>;
+  initialData: Event;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
+  error?: string;
+};
 
-export default function EventForm({
-  mode,
-  initialData,
-  onSubmit,
-  onCancel,
-  isSubmitting = false,
-  error: externalError
-}: EventFormProps) {
+export default function EventForm(props: EventFormProps) {
+  const { mode, onSubmit, onCancel, isSubmitting: externalIsSubmitting, error: externalError } = props;
+
+  const initialData = mode === 'edit' ? (props as Extract<EventFormProps, { mode: 'edit' }>).initialData : undefined;
+
+  const [selectedTags, setSelectedTags] = useState<Tag[]>(
+    mode === 'edit' && initialData?.tags ? initialData.tags : []
+  );
+
+  const [internalIsSubmitting, setInternalIsSubmitting] = useState(false);
+  const [internalError, setInternalError] = useState<string>();
+
+  const isSubmitting = externalIsSubmitting !== undefined ? externalIsSubmitting : internalIsSubmitting;
+  const displayError = externalError || internalError;
+
   const getDefaultValues = (): EventFormData => {
-    if (mode === 'edit' && initialData?.dateTime) {
+    if (mode === 'edit' && initialData) {
       const eventDate = new Date(initialData.dateTime);
       return {
-        title: initialData.title || '',
-        description: initialData.description || '',
+        title: initialData.title,
+        description: initialData.description,
         date: eventDate.toISOString().split('T')[0],
         time: eventDate.toTimeString().slice(0, 5),
-        location: initialData.location || '',
-        capacity: initialData.capacity ?? null,
-        visibility: initialData.visibility || 'public',
-      } as EventFormData;
+        location: initialData.location,
+        capacity: initialData.capacity,
+        visibility: initialData.visibility,
+        tags: initialData.tags?.map(t => t.name) || [],
+      };
     }
-
     return {
       title: '',
       description: '',
@@ -46,41 +62,89 @@ export default function EventForm({
       location: '',
       capacity: null,
       visibility: 'public',
-    } as EventFormData;
+      tags: [],
+    };
   };
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    setError
+    setError,
+    reset,
   } = useForm<EventFormData>({
     resolver: yupResolver(eventSchema),
-    defaultValues: getDefaultValues()
+    defaultValues: getDefaultValues(),
   });
 
-  const onFormSubmit = async (data: EventFormData) => {
+  const onFormSubmit = async (formData: EventFormData) => {
+    if (!formData.date || !formData.time) {
+      setError('root', { message: 'Date and time are required' });
+      return;
+    }
+
+    const dateTimeString = `${formData.date}T${formData.time}`;
+    const selectedDateTime = new Date(dateTimeString);
+
+    if (isNaN(selectedDateTime.getTime())) {
+      setError('root', { message: 'Invalid date format' });
+      return;
+    }
+
+    if (selectedDateTime < new Date()) {
+      setError('root', { message: 'Event date must be in the future' });
+      return;
+    }
+
+    const baseData = {
+      title: formData.title,
+      description: formData.description,
+      dateTime: selectedDateTime.toISOString(),
+      location: formData.location,
+      capacity: formData.capacity === null ? undefined : formData.capacity,
+      visibility: formData.visibility,
+      tags: selectedTags.map(tag => tag.name),
+    };
+
     try {
-      const selectedDateTime = new Date(`${data.date}T${data.time}`);
-      const now = new Date();
-
-      if (selectedDateTime < now) {
-        setError('root', {
-          message: 'Event date must be in the future'
-        });
-        return;
+      if (externalIsSubmitting === undefined) {
+        setInternalIsSubmitting(true);
       }
+      setInternalError(undefined);
 
-      const dateTime = selectedDateTime.toISOString();
-
-      await onSubmit({
-        ...data,
-        dateTime
-      });
-    } catch (error) {
-      setError('root', {
-        message: `Failed to ${mode} event. Please try again.`
-      });
+      if (mode === 'create') {
+        const createData: CreateEventDto = {
+          title: baseData.title,
+          description: baseData.description,
+          dateTime: baseData.dateTime,
+          location: baseData.location,
+          capacity: baseData.capacity,
+          visibility: baseData.visibility,
+          tags: baseData.tags,
+        };
+        await onSubmit(createData);
+        reset();
+        setSelectedTags([]);
+      } else {
+        const updateData: UpdateEventDto = {
+          title: baseData.title,
+          description: baseData.description,
+          dateTime: baseData.dateTime,
+          location: baseData.location,
+          capacity: baseData.capacity,
+          visibility: baseData.visibility,
+          tags: baseData.tags,
+        };
+        await onSubmit(updateData);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save event';
+      setInternalError(message);
+      setError('root', { message });
+    } finally {
+      if (externalIsSubmitting === undefined) {
+        setInternalIsSubmitting(false);
+      }
     }
   };
 
@@ -96,14 +160,14 @@ export default function EventForm({
       </p>
 
       {/* Error message */}
-      {(externalError || errors.root) && (
+      {(displayError || errors.root) && (
         <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-md">
           <div className="flex">
             <div className="shrink-0">
               <XCircleIcon className="h-4 w-4 text-red-400" />
             </div>
             <div className="ml-2">
-              <p className="text-xs text-red-700">{externalError || errors.root?.message}</p>
+              <p className="text-xs text-red-700">{displayError || errors.root?.message}</p>
             </div>
           </div>
         </div>
@@ -119,13 +183,10 @@ export default function EventForm({
           type="text"
           {...register('title')}
           className={`w-full px-3 py-2 text-sm border rounded-lg bg-gray-50 focus:outline-none focus:ring-2
-            focus:ring-green-500 transition-colors ${errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'
-            }`}
+            focus:ring-green-500 transition-colors ${errors.title ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
           placeholder="e.g., Tech Conference 2026"
         />
-        {errors.title && (
-          <p className="mt-1 text-xs text-red-600">{errors.title.message}</p>
-        )}
+        {errors.title && <p className="mt-1 text-xs text-red-600">{errors.title.message}</p>}
       </div>
 
       {/* Description */}
@@ -138,13 +199,10 @@ export default function EventForm({
           rows={3}
           {...register('description')}
           className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
-            focus:ring-green-500 transition-colors resize-none ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'
-            }`}
+            focus:ring-green-500 transition-colors resize-none ${errors.description ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
           placeholder="Describe what makes your event special..."
         />
-        {errors.description && (
-          <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>
-        )}
+        {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}
       </div>
 
       {/* Date and Time */}
@@ -162,12 +220,9 @@ export default function EventForm({
             {...register('date')}
             min={new Date().toISOString().split('T')[0]}
             className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
-              focus:ring-green-500 transition-colors ${errors.date ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`}
+              focus:ring-green-500 transition-colors ${errors.date ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
           />
-          {errors.date && (
-            <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>
-          )}
+          {errors.date && <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>}
         </div>
 
         <div className="flex-1">
@@ -179,12 +234,9 @@ export default function EventForm({
             type="time"
             {...register('time')}
             className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
-            focus:ring-green-500 transition-colors ${errors.time ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`}
+              focus:ring-green-500 transition-colors ${errors.time ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
           />
-          {errors.time && (
-            <p className="mt-1 text-xs text-red-600">{errors.time.message}</p>
-          )}
+          {errors.time && <p className="mt-1 text-xs text-red-600">{errors.time.message}</p>}
         </div>
       </div>
 
@@ -201,13 +253,10 @@ export default function EventForm({
           type="text"
           {...register('location')}
           className={`w-full px-3 py-2 text-sm border bg-gray-50 rounded-lg focus:outline-none focus:ring-2
-            focus:ring-green-500 transition-colors ${errors.location ? 'border-red-300 bg-red-50' : 'border-gray-300'
-            }`}
+            focus:ring-green-500 transition-colors ${errors.location ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
           placeholder="e.g., Convention Center, San Francisco"
         />
-        {errors.location && (
-          <p className="mt-1 text-xs text-red-600">{errors.location.message}</p>
-        )}
+        {errors.location && <p className="mt-1 text-xs text-red-600">{errors.location.message}</p>}
       </div>
 
       {/* Capacity */}
@@ -227,19 +276,26 @@ export default function EventForm({
             focus:ring-green-500 transition-colors ${errors.capacity ? 'border-red-300 bg-red-50' : 'border-gray-300'}`}
           placeholder="Leave empty for unlimited"
         />
-        {errors.capacity && (
-          <p className="mt-1 text-xs text-red-600">{errors.capacity.message}</p>
-        )}
+        {errors.capacity && <p className="mt-1 text-xs text-red-600">{errors.capacity.message}</p>}
         <p className="mt-1 text-xs text-gray-500">
           Maximum number of participants. Leave empty for unlimited.
         </p>
       </div>
 
+      {/* Tags */}
+      <TagSelect
+        value={selectedTags}
+        onChange={setSelectedTags}
+        maxTags={5}
+        label="Tags"
+        error={errors.tags?.message}
+        isDisabled={isSubmitting}
+        placeholder="Select up to 5 tags..."
+      />
+
       {/* Visibility */}
       <div>
-        <label className="block text-xs font-medium text-gray-700 mb-2">
-          Visibility
-        </label>
+        <label className="block text-xs font-medium text-gray-700 mb-2">Visibility</label>
         <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0">
           <label className="flex items-center p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors flex-1">
             <input
@@ -272,9 +328,7 @@ export default function EventForm({
             </div>
           </label>
         </div>
-        {errors.visibility && (
-          <p className="mt-1 text-xs text-red-600">{errors.visibility.message}</p>
-        )}
+        {errors.visibility && <p className="mt-1 text-xs text-red-600">{errors.visibility.message}</p>}
       </div>
 
       {/* Action Buttons */}
@@ -301,16 +355,7 @@ export default function EventForm({
               {mode === 'create' ? 'Creating...' : 'Saving...'}
             </>
           ) : (
-            <>
-              {mode === 'create' ? (
-                'Create Event'
-              ) : (
-                <>
-                  <PencilSquareIcon className="w-4 h-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </>
+            mode === 'create' ? 'Create Event' : 'Save Changes'
           )}
         </button>
       </div>

@@ -9,12 +9,13 @@ import {
 } from '@heroicons/react/24/outline';
 import Modal from '../components/ui/Modal';
 import EventForm from '../components/EventForm';
-import { type EventFormData } from '../utils/schemas/eventSchema';
 import DeleteConfirmation from '../components/DeleteConfirmation';
 import { getErrorMessage } from '../utils/getErrorMessage';
 import ErrorState from '../components/ui/ErrorState';
 import LoadingState from '../components/ui/LoadingState';
 import { formatEventDetails } from '../utils/formatDate';
+import TagChip from '../components/tag/TagChip';
+import type { UpdateEventDto } from '../services/events/events.types';
 
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
@@ -47,21 +48,14 @@ export default function EventDetails() {
     }
   };
 
-  const handleEdit = async (eventData: EventFormData & { dateTime: string }) => {
+  const handleEdit = async (data: UpdateEventDto) => {
     if (!id) return;
 
     setIsUpdating(true);
     setEditError('');
 
     try {
-      await updateEvent(id, {
-        title: eventData.title,
-        description: eventData.description,
-        dateTime: eventData.dateTime,
-        location: eventData.location,
-        capacity: eventData.capacity ?? null,
-        visibility: eventData.visibility,
-      });
+      await updateEvent(id, data);
       setShowEditModal(false);
     } catch (err) {
       setEditError(getErrorMessage(err));
@@ -97,7 +91,7 @@ export default function EventDetails() {
         </button>
 
         {/* Event Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible mb-4">
           {/* Header */}
           <div className="p-3 sm:p-4 border-b border-gray-100">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
@@ -108,17 +102,26 @@ export default function EventDetails() {
                   <button
                     onClick={() => setShowEditModal(true)}
                     disabled={isEventPassed}
-                    className={`p-1.5 rounded-lg transition-colors ${isEventPassed
+                    className={`p-1.5 rounded-lg cursor-pointer transition-colors relative group ${isEventPassed
                       ? 'text-gray-300 cursor-not-allowed'
                       : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
                       }`}
                     aria-label="Edit event"
                   >
                     <PencilIcon className="w-4 h-4" />
+
+                    {/* Tooltip for disabled state */}
+                    {isEventPassed && (
+                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 
+                          text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 
+                          transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        Event has ended, cannot edit
+                      </span>
+                    )}
                   </button>
                   <button
                     onClick={() => setShowDeleteModal(true)}
-                    className="p-1.5 text-gray-600 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                    className="p-1.5 text-gray-600 cursor-pointer hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
                     aria-label="Delete event"
                   >
                     <TrashIcon className="w-4 h-4" />
@@ -130,8 +133,19 @@ export default function EventDetails() {
 
           {/* Content */}
           <div className="p-3 sm:p-4 space-y-4">
-            {/* Description */}
-            <p className="text-sm text-gray-600 leading-relaxed">{currentEvent.description}</p>
+            {/* Description and Tags */}
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600 leading-relaxed">{currentEvent.description}</p>
+
+              {/* Tags Section */}
+              {currentEvent.tags && currentEvent.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {currentEvent.tags.map((tag) => (
+                    <TagChip key={tag.id} name={tag.name} />
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Details Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
