@@ -5,7 +5,7 @@ import {
   CalendarIcon, UserGroupIcon, PlusCircleIcon,
   ArrowLeftEndOnRectangleIcon, ArrowRightEndOnRectangleIcon
 } from '@heroicons/react/24/outline';
-import BurgerMenu from '../components/BurgerMenu';
+import BurgerMenu from './BurgerMenu';
 
 export default function Layout() {
   const { user, logout } = useAuthStore();

@@ -6,6 +6,8 @@ import { UsersModule } from './users/users.module';
 import { EventsModule } from './events/events.module';
 import { DatabaseModule } from './database/database.module';
 import { SeedModule } from './database/seed/seed.module';
+import { TagsModule } from './tags/tags.module';
+import { AssistantModule } from './assistant/assistant.module';
 
 @Module({
   imports: [
@@ -17,8 +19,10 @@ import { SeedModule } from './database/seed/seed.module';
     AuthModule,
     UsersModule,
     EventsModule,
+    TagsModule,
     DatabaseModule,
-    SeedModule
+    SeedModule,
+    AssistantModule
   ],
   controllers: [],
   providers: [],

@@ -29,6 +29,17 @@ export const API_ENDPOINTS = {
     ME_PARTICIPATIONS: '/users/me/participations',
     DETAIL: (id: string) => `/users/${id}`,
   },
+
+  TAGS: {
+    BASE: '/tags',
+    DETAIL: (id: string) => `/tags/${id}`,
+    CREATE: '/tags',
+    DELETE: (id: string) => `/tags/${id}`,
+  },
+
+  ASSISTANT: {
+    ASK: '/assistant/ask',
+  },
 } as const;
 
 export type ApiEndpoints = typeof API_ENDPOINTS;

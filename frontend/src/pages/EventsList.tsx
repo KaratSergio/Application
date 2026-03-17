@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useEvents } from '../services/hooks/useEvents';
 import { useAuth } from '../services/hooks/useAuth';
 import type { Event } from '../services/events/events.types';
+import type { Tag } from '../services/tags/tags.types';
 import {
   CalendarIcon, MapPinIcon,
   UserGroupIcon, MagnifyingGlassIcon,
@@ -12,12 +13,17 @@ import { JoinButton, LeaveButton, FullButton, DisabledButton, EndedButton } from
 import LoadingState from '../components/ui/LoadingState';
 import ErrorState from '../components/ui/ErrorState';
 import { formatEventListItem } from '../utils/formatDate';
+import TagChip from '../components/tag/TagChip';
+import TagSelect from '../components/tag/TagSelect';
 
 export default function EventsList() {
   const { events, isLoading, error, fetchPublicEvents, joinEvent, leaveEvent } = useEvents();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [filters, setFilters] = useState({
     location: '',
     date: '',
@@ -45,14 +51,39 @@ export default function EventsList() {
       const matchesDate = !filters.date ||
         (event.dateTime && new Date(event.dateTime).toISOString().split('T')[0] === filters.date);
 
-      return matchesSearch && matchesLocation && matchesDate;
+      const matchesTags = selectedTags.length === 0 ||
+        (event.tags && selectedTags.every(tag =>
+          event.tags?.some(eventTag => eventTag.id === tag.id)
+        ));
+
+      return matchesSearch && matchesLocation && matchesDate && matchesTags;
     });
-  }, [events, searchTerm, filters]);
+  }, [events, searchTerm, filters, selectedTags]);
 
   const clearFilters = () => {
     setSearchTerm('');
     setFilters({ location: '', date: '' });
-    setShowFilters(false);
+    setSelectedTags([]);
+  };
+
+  const activeFiltersCount =
+    (filters.location ? 1 : 0) +
+    (filters.date ? 1 : 0) +
+    selectedTags.length;
+
+  const handleJoinClick = async (e: React.MouseEvent, eventId: string) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      sessionStorage.setItem('pendingEventJoin', eventId);
+      navigate('/login', { replace: true });
+      return;
+    }
+
+    try {
+      await joinEvent(eventId);
+    } catch (error) {
+      console.error('Failed to join event:', error);
+    }
   };
 
   if (isLoading) return <LoadingState message="Loading events..." fullScreen />;
@@ -99,16 +130,16 @@ export default function EventsList() {
 
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-3 bg-white  border border-gray-300 rounded-lg sm:px-3 py-1.5
+              className={`px-3 bg-white border border-gray-300 rounded-lg sm:px-3 py-1.5
                   sm:py-0 flex items-center justify-center space-x-1.5 transition-colors text-xs sm:text-sm cursor-pointer
-                  ${showFilters || filters.location || filters.date ? ' text-green-700 ' : ' text-gray-400 '}`}
+                  ${showFilters || activeFiltersCount > 0 ? ' text-green-700 ' : ' text-gray-400 '}`}
             >
               <FunnelIcon className="mr-0 w-3.5 h-3.5 sm:w-6 sm:h-6" />
               <span className="hidden xs:inline">Filters</span>
-              {(filters.location || filters.date) && (
+              {activeFiltersCount > 0 && (
                 <span className="ml-1 bg-white text-green-600 rounded-full w-4 h-4 
                   flex items-center justify-center text-[8px] sm:text-[10px] font-bold">
-                  {(filters.location ? 1 : 0) + (filters.date ? 1 : 0)}
+                  {activeFiltersCount}
                 </span>
               )}
             </button>
@@ -128,34 +159,47 @@ export default function EventsList() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Location
-                </label>
-                <input
-                  type="text"
-                  placeholder="Filter by location"
-                  value={filters.location}
-                  onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
-                  className="w-full px-2 py-1.5 text-xs border border-gray-300 
-                  rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
+            <div className="space-y-3">
+              {/* Location & Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Filter by location"
+                    value={filters.location}
+                    onChange={(e) => setFilters(prev => ({ ...prev, location: e.target.value }))}
+                    className="w-full px-2 py-2.5 text-xs border bg-gray-50 border-gray-300 
+                    rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={filters.date}
+                    onChange={(e) => setFilters(prev => ({ ...prev, date: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-2 py-2.5 text-xs border bg-gray-50 border-gray-300 
+                    rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Date
-                </label>
-                <input
-                  type="date"
-                  value={filters.date}
-                  onChange={(e) => setFilters(prev => ({ ...prev, date: e.target.value }))}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="w-full px-2 py-1.5 text-xs border border-gray-300 
-                  rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
+              {/* Tags Filter */}
+              <TagSelect
+                value={selectedTags}
+                onChange={setSelectedTags}
+                maxTags={5}
+                label="Filter by tags"
+                showMaxTags={false}
+                placeholder="Select tags to filter..."
+              />
             </div>
           </div>
         )}
@@ -218,6 +262,15 @@ export default function EventsList() {
                           )}
                         </div>
                       </div>
+
+                      {/* Tags */}
+                      {event.tags && event.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {event.tags.map((tag) => (
+                            <TagChip key={tag.id} name={tag.name} />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </Link>
 
@@ -255,10 +308,7 @@ export default function EventsList() {
                       ) : (
                         <JoinButton
                           fullWidth
-                          onClick={(e) => {
-                            e.preventDefault();
-                            joinEvent(event.id);
-                          }}
+                          onClick={(e) => handleJoinClick(e, event.id)}
                         >
                           Join Event
                         </JoinButton>
@@ -279,9 +329,11 @@ export default function EventsList() {
               <p className="text-xs sm:text-sm text-gray-500 mb-3 sm:mb-4">
                 {events.length === 0
                   ? 'No public events available at the moment'
-                  : 'Try adjusting your search or filters'}
+                  : selectedTags.length > 0
+                    ? 'No events match the selected tags'
+                    : 'Try adjusting your search or filters'}
               </p>
-              {(searchTerm || filters.location || filters.date) && (
+              {(searchTerm || filters.location || filters.date || selectedTags.length > 0) && (
                 <button
                   onClick={clearFilters}
                   className="px-4 sm:px-5 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs sm:text-sm font-medium"
