@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEvents } from '../services/hooks/useEvents';
-import EventForm from '../components/EventForm';
+import EventForm from '../components/form/EventForm';
 import { getErrorMessage } from '../utils/getErrorMessage';
 import type { CreateEventDto } from '../services';
 import BackButton from '../components/ui/BackButton';

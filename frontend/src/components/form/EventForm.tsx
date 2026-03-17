@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { eventSchema, type EventFormData } from '../utils/schemas/eventSchema';
+import { eventSchema, type EventFormData } from '../../utils/schemas/eventSchema';
 import {
   CalendarIcon, MapPinIcon, UserGroupIcon,
   GlobeAltIcon, LockClosedIcon, XCircleIcon
 } from '@heroicons/react/24/outline';
-import TagSelect from './tag/TagSelect';
-import type { Tag } from '../services/tags/tags.types';
-import type { CreateEventDto, UpdateEventDto, Event } from '../services';
+import TagSelect from '../tag/TagSelect';
+import type { Tag } from '../../services/tags/tags.types';
+import type { CreateEventDto, UpdateEventDto, Event } from '../../services';
 
 type EventFormProps = {
   mode: 'create';

@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 note.md
+
+*storybook.log
+storybook-static

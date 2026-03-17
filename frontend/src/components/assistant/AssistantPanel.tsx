@@ -18,10 +18,10 @@ export default function AssistantPanel({ onClose }: AssistantPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    document.body.classList.add('overflow-hidden');
-    return () => document.body.classList.remove('overflow-hidden');
-  }, []);
+  // useEffect(() => {
+  //   document.body.classList.add('overflow-hidden');
+  //   return () => document.body.classList.remove('overflow-hidden');
+  // }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
