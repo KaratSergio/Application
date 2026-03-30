@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useEvents } from '../services/hooks/useEvents';
-import { useAuth } from '../services/hooks/useAuth';
+import { useEventStore } from '../services/store/eventStore';
+import { useAuthStore } from '../services/store/authStore';
 import Modal from '../components/ui/Modal';
 import EventForm from '../components/form/EventForm';
 import DeleteConfirmation from '../components/ui/DeleteConfirmation';
@@ -20,8 +20,8 @@ import {
 export default function EventDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentEvent, isLoading, error, fetchEventById, joinEvent, leaveEvent, deleteEvent, updateEvent } = useEvents();
-  const { user } = useAuth();
+  const { currentEvent, isLoading, error, fetchEventById, joinEvent, leaveEvent, deleteEvent, updateEvent } = useEventStore();
+  const { user } = useAuthStore();
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -81,10 +81,8 @@ export default function EventDetails() {
   return (
     <div className="py-3 sm:py-6">
       <div className="max-w-3xl mx-auto px-3 sm:px-4">
-        {/* Back button */}
         <BackButton to="/events" label="Back to Events" />
 
-        {/* Event Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-visible mb-4">
           {/* Header */}
           <div className="p-3 sm:p-4 border-b border-gray-100">
@@ -103,8 +101,6 @@ export default function EventDetails() {
                     aria-label="Edit event"
                   >
                     <PencilIcon className="w-4 h-4" />
-
-                    {/* Tooltip for disabled state */}
                     {isEventPassed && (
                       <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 
                           text-xs text-white bg-gray-800 rounded opacity-0 group-hover:opacity-100 
@@ -125,13 +121,10 @@ export default function EventDetails() {
             </div>
           </div>
 
-          {/* Content */}
+          {/* Content - same as before */}
           <div className="p-3 sm:p-4 space-y-4">
-            {/* Description and Tags */}
             <div className="space-y-3">
               <p className="text-sm text-gray-600 leading-relaxed">{currentEvent.description}</p>
-
-              {/* Tags Section */}
               {currentEvent.tags && currentEvent.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {currentEvent.tags.map((tag) => (
@@ -141,7 +134,6 @@ export default function EventDetails() {
               )}
             </div>
 
-            {/* Details Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex items-start space-x-2 p-2 bg-gray-50 rounded-lg">
                 <CalendarIcon className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
@@ -185,7 +177,6 @@ export default function EventDetails() {
               </div>
             </div>
 
-            {/* Organizer Info */}
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-600">
                 <span className="font-medium">Organized by:</span>{' '}
@@ -196,7 +187,6 @@ export default function EventDetails() {
               </p>
             </div>
 
-            {/* Join/Leave Button */}
             {currentEvent.organizerId !== user?.id && (
               <div className="pt-3 border-t border-gray-100">
                 {isEventPassed ? (
@@ -210,8 +200,7 @@ export default function EventDetails() {
                 ) : currentEvent.userJoined ? (
                   <button
                     onClick={() => leaveEvent(currentEvent.id)}
-                    className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700
-          transition-colors text-sm font-medium flex items-center justify-center space-x-1"
+                    className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
                   >
                     <span>Leave Event</span>
                     <ChevronRightIcon className="w-3 h-3" />
@@ -219,8 +208,7 @@ export default function EventDetails() {
                 ) : (
                   <button
                     onClick={() => joinEvent(currentEvent.id)}
-                    className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 
-          transition-colors text-sm font-medium flex items-center justify-center space-x-1"
+                    className="w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
                   >
                     <span>Join Event</span>
                     <ChevronRightIcon className="w-3 h-3" />
@@ -245,8 +233,7 @@ export default function EventDetails() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {currentEvent.participants.map((p) => (
                   <div key={p.userId} className="flex items-center p-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <div className="w-8 h-8 bg-linear-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center
-                      text-white font-semibold text-sm shadow-sm">
+                    <div className="w-8 h-8 bg-linear-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm">
                       {(p?.userEmail || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div className="ml-2">

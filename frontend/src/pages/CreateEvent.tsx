@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEvents } from '../services/hooks/useEvents';
+import { useEventStore } from '../services/store/eventStore';
 import EventForm from '../components/form/EventForm';
 import { getErrorMessage } from '../utils/getErrorMessage';
 import type { CreateEventDto } from '../services';
@@ -8,7 +8,7 @@ import BackButton from '../components/ui/BackButton';
 
 export default function CreateEvent() {
   const navigate = useNavigate();
-  const { createEvent, isLoading } = useEvents();
+  const { createEvent, isLoading } = useEventStore();
   const [error, setError] = useState('');
 
   const handleSubmit = async (data: CreateEventDto) => {

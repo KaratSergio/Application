@@ -1,7 +1,7 @@
-import { useId } from 'react';
+import { useId, useEffect } from 'react';
 import Select, { components } from 'react-select';
 import type { MultiValue, StylesConfig, OptionProps, MultiValueProps } from 'react-select';
-import { useTagsLoader } from '../../services/hooks/useTagsLoader';
+import { useTagStore } from '../../services/store/tagStore';
 import type { Tag } from '../../services/tags/tags.types';
 import TagChip from './TagChip';
 
@@ -121,7 +121,14 @@ export default function TagSelect({
   showMaxTags = true,
 }: TagSelectProps) {
   const instanceId = useId();
-  const { tags, isLoading } = useTagsLoader();
+  const { tags, isLoading, fetchTags } = useTagStore();
+
+  // Auto-load tags when component mounts
+  useEffect(() => {
+    if (tags.length === 0 && !isLoading) {
+      fetchTags();
+    }
+  }, [tags.length, isLoading, fetchTags]);
 
   const options: TagOption[] = tags.map(tag => ({
     value: tag.id,

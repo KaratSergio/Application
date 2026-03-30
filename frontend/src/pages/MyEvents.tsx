@@ -12,8 +12,8 @@ import {
   ListBulletIcon, Squares2X2Icon,
   ClockIcon, MapPinIcon, UserGroupIcon
 } from '@heroicons/react/24/outline';
-import { useEvents } from '../services/hooks/useEvents';
-import { useAuth } from '../services/hooks/useAuth';
+import { useEventStore } from '../services/store/eventStore';
+import { useAuthStore } from '../services/store/authStore';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 import type { CalendarEvent } from '../components/calendar/types';
@@ -36,8 +36,8 @@ injectCalendarStyles();
 
 export default function MyEvents() {
   const navigate = useNavigate();
-  const { userEvents, fetchMyEvents, isLoading } = useEvents();
-  const { user } = useAuth();
+  const { userEvents, fetchMyEvents, isLoading } = useEventStore();
+  const { user } = useAuthStore();
   const [view, setView] = useState<'month' | 'day'>('month');
   const [date, setDate] = useState(new Date());
   const [showMobileList, setShowMobileList] = useState(false);
@@ -57,7 +57,6 @@ export default function MyEvents() {
     return () => window.removeEventListener('resize', checkMobile);
   }, [fetchMyEvents]);
 
-  // Updating the calendar height when resizing
   useEffect(() => {
     const handleResize = () => setView(prev => prev);
     window.addEventListener('resize', handleResize);
@@ -69,7 +68,7 @@ export default function MyEvents() {
       id: event.id,
       title: event.title,
       start: new Date(event.dateTime),
-      end: new Date(new Date(event.dateTime).getTime() + 2 * 60 * 60 * 1000), // +2 hours
+      end: new Date(new Date(event.dateTime).getTime() + 2 * 60 * 60 * 1000),
       resource: {
         ...event,
         location: event.location,
@@ -124,7 +123,6 @@ export default function MyEvents() {
   return (
     <div className="sm:py-4 md:py-8">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 md:px-6 lg:px-8">
-        {/* Header with title and mobile toggle */}
         <div className="flex sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mb-3 sm:mb-6">
           {!isMobile && (
             <div>
@@ -133,7 +131,6 @@ export default function MyEvents() {
             </div>
           )}
 
-          {/* Mobile view toggle */}
           {isMobile && (
             <div className="flex items-center justify-between w-full">
               <button
@@ -156,10 +153,8 @@ export default function MyEvents() {
           )}
         </div>
 
-        {/* Navigation row - hidden when list ON */}
         {!showMobileList && (
           <div className="flex items-center justify-between mb-3 sm:mb-6">
-            {/* Left side with arrows and month/year */}
             <div className="flex items-center space-x-1 sm:space-x-2">
               <button
                 onClick={() => handleNavigate('PREV')}
@@ -182,7 +177,6 @@ export default function MyEvents() {
               </button>
             </div>
 
-            {/* Right side with view toggles */}
             <div className="bg-gray-100 p-0.5 sm:p-1 rounded-lg">
               <button
                 onClick={() => setView('month')}
@@ -206,7 +200,6 @@ export default function MyEvents() {
           </div>
         )}
 
-        {/* Calendar/View Area */}
         <div className={`${showMobileList ? 'hidden' : 'block'}`}>
           {view === 'day' ? (
             <div ref={dayViewRef} className="">
@@ -252,7 +245,6 @@ export default function MyEvents() {
           )}
         </div>
 
-        {/* Mobile List View */}
         <div className={`${showMobileList ? 'block' : 'hidden'} sm:hidden`}>
           <div className="space-y-2 sm:space-y-4">
             {userEvents.map((event) => (
